@@ -95,9 +95,10 @@ def scrape_many(sources: list[dict], max_workers: int = 5) -> list[dict]:
 
     for s, text in zip(sources, texts):
         if len(text) > 200:
-            s["content"] = text           # scrape worked
+            # keep Tavily's query-relevant snippet AND the start of the page text
+            s["content"] = f"Search snippet: {s['snippet'][:800]}\n\nPage text: {text[:2000]}"
             s["scraped"] = True
         else:
-            s["content"] = s["snippet"]   # blocked / paywalled / JS-only page: use snippet
-            s["scraped"] = False          # lets the UI show a ✅ or ⚠️ per source
+            s["content"] = s["snippet"][:1500]   # scrape failed or too short: snippet only
+            s["scraped"] = False
     return sources
