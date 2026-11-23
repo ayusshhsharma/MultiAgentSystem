@@ -1,3 +1,4 @@
+import argparse
 import csv
 import random
 import re
@@ -16,12 +17,12 @@ from pipeline import run_research_pipeline
 # Change this if the model isn't available on your Groq account.
 JUDGE_MODEL = "groq:qwen/qwen3.8-27b"
 judge_llm = init_chat_model(JUDGE_MODEL, temperature=0)
-judge_llm.invoke("Reply with the word YES")    # fail fast if the model is unavailable
-print(f"Judge model OK: {JUDGE_MODEL}")
 
 MAX_JUDGED_SENTENCES = 10     # cap judge calls per report (rate limits + cost)
 SLEEP_BETWEEN_TOPICS = 5      # seconds, avoids Groq / Tavily rate limits
 random.seed(42)               # reproducible sentence sampling
+
+JUDGMENTS = []
 
 TOPICS = [
     # recent / fast-changing (a no-search baseline should struggle here)
@@ -45,6 +46,14 @@ TOPICS = [
     "How quantum computing could affect modern cryptography",
     "Impact of UPI on digital payments in India",
     "Effects of climate change on Himalayan glaciers",
+]
+
+QUICK_TOPICS = [
+    "Major reasons behind the recent fall in gold and silver prices in India",
+    "Recent changes in global AI regulation",
+    "Advantages and risks of nuclear microreactors",
+    "Impact of remote work on urban real estate markets",
+    "Impact of UPI on digital payments in India",
 ]
 
 CITE_RE = re.compile(r"\[(\d+)\]")
@@ -132,7 +141,7 @@ def judge_supported(sentence: str, source_texts: str):
     return None
 
 
-def faithfulness(report: str, sources: list[dict]) -> float | None:
+def faithfulness(report: str, sources: list[dict], topic: str = "") -> float | None:
     """Share of sampled cited sentences that the cited sources actually support."""
     by_id = {s["id"]: s["content"] for s in sources}
     cited_sentences = [
@@ -152,6 +161,7 @@ def faithfulness(report: str, sources: list[dict]) -> float | None:
         source_texts = "\n\n".join(by_id[i] for i in ids)
         clean = CITE_RE.sub("", sent).strip()      # judge shouldn't see the [n] markers
         v = judge_supported(clean, source_texts)
+        JUDGMENTS.append({"topic": topic, "sentence": clean, "cited": ids, "verdict": v})
         if v is not None:
             verdicts.append(v)
     return sum(verdicts) / len(verdicts) if verdicts else None
@@ -171,14 +181,17 @@ FIELDS = [
 ]
 
 
-def evaluate():
+def evaluate(topics=None):
+    if topics is None:
+        topics = TOPICS
+
     rows = []
     with open("eval_results.csv", "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
 
-        for i, topic in enumerate(TOPICS, 1):
-            print(f"\n[{i}/{len(TOPICS)}] {topic}")
+        for i, topic in enumerate(topics, 1):
+            print(f"\n[{i}/{len(topics)}] {topic}")
             row = {k: "" for k in FIELDS}
             row["topic"] = topic
             try:
@@ -201,7 +214,7 @@ def evaluate():
                 row["hallucinated_cite_rate"] = round(
                     hallucinated_citation_rate(state["draft"], len(sources)), 3
                 )
-                faith = faithfulness(state["report"], sources)
+                faith = faithfulness(state["report"], sources, topic=topic)
                 row["faithfulness"] = round(faith, 3) if faith is not None else ""
             except Exception as e:
                 row["error"] = str(e)[:200]
@@ -211,6 +224,11 @@ def evaluate():
             f.flush()                              # keep partial results if the run is interrupted
             rows.append(row)
             time.sleep(SLEEP_BETWEEN_TOPICS)
+
+    with open("eval_judgments.csv", "w", newline="", encoding="utf-8") as f_judg:
+        judg_writer = csv.DictWriter(f_judg, fieldnames=["topic", "sentence", "cited", "verdict"])
+        judg_writer.writeheader()
+        judg_writer.writerows(JUDGMENTS)
 
     write_summary(rows)
 
@@ -240,4 +258,12 @@ def write_summary(rows):
 
 
 if __name__ == "__main__":
-    evaluate()
+    parser = argparse.ArgumentParser(description="Evaluate MultiAgentSystem pipeline")
+    parser.add_argument("--quick", action="store_true", help="Run quick evaluation on 5 select topics")
+    args = parser.parse_args()
+
+    judge_llm.invoke("Reply with the word YES")    # fail fast if the model is unavailable
+    print(f"Judge model OK: {JUDGE_MODEL}")
+
+    selected_topics = QUICK_TOPICS if args.quick else TOPICS
+    evaluate(selected_topics)
