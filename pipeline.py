@@ -39,6 +39,22 @@ def finalize_citations(report: str, sources: list[dict]) -> str:
     return report + "\n".join(lines)
 
 
+def normalize_citations(text: str) -> str:
+    """[1, 2] / [1,2] -> [1][2] so citation checks and the Sources list see them."""
+    def split(m):
+        return "".join(f"[{n}]" for n in re.findall(r"\d+", m.group(1)))
+    return re.sub(r"\[(\d+(?:\s*,\s*\d+)+)\]", split, text)
+
+
+def write_report(topic: str, context: str, tries: int = 3) -> str:
+    """Call the Writer, retrying if it returns an empty or truncated report."""
+    for _ in range(tries):
+        draft = writer_chain.invoke({"topic": topic, "research": context})
+        if len(draft.split()) >= 150:
+            return normalize_citations(draft)
+    raise RuntimeError("Writer returned an empty or too-short report")
+
+
 def run_research_pipeline(topic : str)->dict:
 
     state ={}
@@ -81,10 +97,7 @@ def run_research_pipeline(topic : str)->dict:
 
     research_combined = build_context(sources)   # CHANGED: numbered sources instead of raw text
 
-    draft = writer_chain.invoke({
-        "topic" : topic,
-        "research" : research_combined
-    })
+    draft = write_report(topic, research_combined)
 
     state["draft"] = draft
     # NEW: strip invalid [n] citations and append a code-generated Sources section
