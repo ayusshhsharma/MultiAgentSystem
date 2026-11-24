@@ -2,8 +2,10 @@
 # 1. IMPORT REQUIRED LIBRARIES
 # ============================================================
 
+import time
 import streamlit as st
 from pipeline import run_research_pipeline
+from demo_cache_utils import save_demo_run, list_saved_runs, load_demo_run
 
 
 # ============================================================
@@ -19,7 +21,7 @@ st.set_page_config(
 
 
 # ============================================================
-# 3. CUSTOM CSS  (unchanged)
+# 3. CUSTOM CSS
 # ============================================================
 
 st.markdown("""
@@ -92,7 +94,6 @@ with st.sidebar:
 
     st.subheader("Research Workflow")
 
-    # CHANGED: Reader Agent replaced by parallel scraping, citations mentioned
     st.markdown("""
     **01.** 🔎 Search Agent
 
@@ -110,6 +111,29 @@ with st.sidebar:
 
     Reviews the generated report.
     """)
+
+    st.divider()
+
+    # SECTION: SAVED DEMO RUNS (Replay offline)
+    st.subheader("Saved Demo Runs")
+    saved_runs = list_saved_runs()
+    if saved_runs:
+        topic_options = [r["topic"] for r in saved_runs]
+        selected_topic = st.selectbox(
+            "Select a pre-generated run",
+            topic_options,
+            key="saved_demo_topic"
+        )
+        if st.button("📂 Load Saved Run", use_container_width=True):
+            chosen = next(r for r in saved_runs if r["topic"] == selected_topic)
+            payload = load_demo_run(chosen["file_path"])
+            st.session_state["research_state"] = payload["state"]
+            st.session_state["research_topic"] = payload["topic"]
+            st.session_state["is_saved_run"] = True
+            st.session_state["elapsed_seconds"] = payload.get("elapsed_seconds", 0.0)
+            st.rerun()
+    else:
+        st.caption("No saved demo runs yet. Generate runs via make_demo_cache.py or run a topic live.")
 
     st.divider()
 
@@ -142,7 +166,7 @@ st.markdown(
 st.markdown(
     '<div class="subtitle">'
     'Research any topic using intelligent AI agents, '
-    'web search, parallel webpage scraping and cited report generation.'   # CHANGED
+    'web search, parallel webpage scraping and cited report generation.'
     '</div>',
     unsafe_allow_html=True
 )
@@ -161,6 +185,13 @@ topic = st.text_area(
         "the downfall of gold and silver prices in India?"
     ),
     height=100
+)
+
+st.caption(
+    "💡 **Example topics:** "
+    "`Major reasons behind the recent fall in gold and silver prices in India` • "
+    "`Mixture of Experts vs dense LLMs: architecture and trade-offs` • "
+    "`Impact of UPI on digital payments in India`"
 )
 
 start_research = st.button(
@@ -182,26 +213,44 @@ if start_research:
 
     else:
 
+        clean_topic = topic.strip()
+        t0 = time.perf_counter()
+
         try:
+            # Wrap pipeline call in live st.status
+            with st.status("Your AI research team is working...", expanded=True) as status:
 
-            # Show progress indicator
-            with st.spinner(
-                "Your AI research team is working... "
-                "This may take a few minutes."
-            ):
+                def progress_callback(step_num: int, message: str):
+                    status.update(label=f"Step {step_num}/4: {message}...")
+                    st.write(f"✓ **Step {step_num}:** {message}")
 
-                # Call the existing pipeline
-                research_state = run_research_pipeline(topic.strip())
+                research_state = run_research_pipeline(clean_topic, on_progress=progress_callback)
+                elapsed = round(time.perf_counter() - t0, 1)
+                status.update(
+                    label=f"Research complete in {elapsed}s!",
+                    state="complete",
+                    expanded=False
+                )
+
+            # Auto-save payload for offline replay
+            save_demo_run(clean_topic, research_state, elapsed)
 
             # Store results in session state
             st.session_state["research_state"] = research_state
-            st.session_state["research_topic"] = topic.strip()
+            st.session_state["research_topic"] = clean_topic
+            st.session_state["is_saved_run"] = False
+            st.session_state["elapsed_seconds"] = elapsed
 
-            st.success("Research completed successfully!")
+            st.success(f"Research completed successfully in {elapsed}s!")
 
         except Exception as e:
-
-            st.error("Something went wrong while running the research pipeline.")
+            err_msg = str(e)
+            if "429" in err_msg or "rate limit" in err_msg.lower():
+                st.warning("The LLM rate limit was reached. Load a saved run from the sidebar to continue the demo.")
+            elif any(term in err_msg for term in ["NameResolutionError", "Max retries exceeded", "Failed to resolve"]):
+                st.warning("Network problem reaching the search API. Switch network (phone hotspot) or load a saved run.")
+            else:
+                st.error("Something went wrong while running the research pipeline.")
 
             with st.expander("View error details"):
                 st.exception(e)
@@ -214,28 +263,31 @@ if start_research:
 if "research_state" in st.session_state:
 
     state = st.session_state["research_state"]
-
     research_topic = st.session_state["research_topic"]
+    is_saved = st.session_state.get("is_saved_run", False)
+    elapsed = st.session_state.get("elapsed_seconds")
 
-    # NEW: structured sources from pipeline.py (list of dicts), empty list if missing
+    # Structured sources from pipeline.py (list of dicts)
     sources = state.get("sources", [])
     scraped_count = sum(1 for s in sources if s.get("scraped"))
 
     st.divider()
 
     st.markdown("## 📊 Research Results")
-
     st.markdown(f"**Research Topic:** {research_topic}")
+
+    if is_saved:
+        st.caption("ℹ️ *Loaded from saved run (offline)*")
+    elif elapsed:
+        st.caption(f"⏱️ *Generated live in {elapsed}s*")
 
     # Display workflow status
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        # CHANGED: shows how many sources were found
         st.success(f"✓ Search Complete ({len(sources)} sources)")
 
     with col2:
-        # CHANGED: shows scrape success rate, warning if every page failed
         if sources and scraped_count == 0:
             st.warning("⚠ All pages fell back to snippets")
         else:
@@ -262,10 +314,8 @@ if "research_state" in st.session_state:
     # --------------------------------------------------------
 
     with tab1:
-
         st.subheader("Search Agent Output")
 
-        # CHANGED: clickable table instead of a raw text blob
         if sources:
             st.dataframe(
                 [
@@ -279,13 +329,12 @@ if "research_state" in st.session_state:
                     for s in sources
                 ],
                 column_config={
-                    "URL": st.column_config.LinkColumn("URL"),   # makes links clickable
+                    "URL": st.column_config.LinkColumn("URL"),
                 },
                 hide_index=True,
                 use_container_width=True,
             )
         else:
-            # fallback to the old text output if sources are missing
             st.markdown(state.get("search_results", "") or "No search results available.")
 
     # --------------------------------------------------------
@@ -293,10 +342,8 @@ if "research_state" in st.session_state:
     # --------------------------------------------------------
 
     with tab2:
+        st.subheader("Scraped Content (per source)")
 
-        st.subheader("Scraped Content (per source)")   # CHANGED title
-
-        # CHANGED: one expander per source, with a status icon
         if sources:
             for s in sources:
                 icon = "✅" if s.get("scraped") else "⚠️"
@@ -306,7 +353,6 @@ if "research_state" in st.session_state:
                         st.caption("Scraping failed or returned too little text, so the search snippet was used.")
                     st.text(s["content"])
         else:
-            # fallback to the old text output
             st.markdown(state.get("scraped_content", "") or "No scraped content available.")
 
     # --------------------------------------------------------
@@ -314,16 +360,12 @@ if "research_state" in st.session_state:
     # --------------------------------------------------------
 
     with tab3:
-
         st.subheader("Generated Research Report")
 
         report = state.get("report", "")
-
-        # unchanged: the report already contains [n] citations and a ## Sources section
         st.markdown(report or "No report generated.")
 
         if report:
-
             st.download_button(
                 label="⬇️ Download Research Report",
                 data=str(report),
@@ -332,15 +374,11 @@ if "research_state" in st.session_state:
             )
 
     # --------------------------------------------------------
-    # TAB 4: CRITIC REVIEW  (unchanged)
+    # TAB 4: CRITIC REVIEW
     # --------------------------------------------------------
 
     with tab4:
-
         st.subheader("Critic Agent Feedback")
 
         feedback = state.get("feedback", "")
-
-        st.markdown(
-            feedback or "No critic feedback available."
-        )
+        st.markdown(feedback or "No critic feedback available.")
