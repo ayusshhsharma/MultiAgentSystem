@@ -1,13 +1,10 @@
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from agents import llm
 
 load_dotenv()
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-3.8-flash",
-    temperature=0.3
-)
-
-response = llm.invoke("Reply with only: Gemini is working")
-
-print(response.content)
+try:
+    response = llm.invoke("Reply with only: Groq is working", max_tokens=10)
+    print("Groq is working")
+except Exception as e:
+    print(f"Error checking Groq: {e}")
