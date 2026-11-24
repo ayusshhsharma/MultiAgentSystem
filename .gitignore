@@ -1,4 +1,7 @@
-.venv/
 .env
+.venv/
 __pycache__/
 *.pyc
+demo_cache/*.tmp
+eval_*.csv
+baseline_cache.json
