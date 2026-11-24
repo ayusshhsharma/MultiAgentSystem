@@ -55,10 +55,12 @@ def write_report(topic: str, context: str, tries: int = 3) -> str:
     raise RuntimeError("Writer returned an empty or too-short report")
 
 
-def run_research_pipeline(topic : str)->dict:
+def run_research_pipeline(topic : str, on_progress=None)->dict:
 
     state ={}
     # step 1 - search (now a direct Tavily call, returns structured sources)
+    if on_progress:
+        on_progress(1, "Searching the web (Tavily)")
     print("\n "+ "="*50)
     print("step 1 - searching the web ...")
     print("="*50)
@@ -74,6 +76,8 @@ def run_research_pipeline(topic : str)->dict:
     print("\n search result ",state['search_results'])
 
     # step 2 - scrape ALL sources in parallel (replaces the Reader agent)
+    if on_progress:
+        on_progress(2, "Scraping sources in parallel")
     print("\n"+" ="*50)
     print("step 2 - scraping all sources in parallel ...")
     print("="*50)
@@ -90,7 +94,8 @@ def run_research_pipeline(topic : str)->dict:
     print("\nscraped content: \n", state['scraped_content'])
 
     #step 3 - writer chain
-
+    if on_progress:
+        on_progress(3, "Writer is drafting the cited report")
     print("\n"+" ="*50)
     print("step 3 - Writer is drafting the report ...")
     print("="*50)
@@ -106,7 +111,8 @@ def run_research_pipeline(topic : str)->dict:
     print("\n Final Report\n",state['report'])
 
     #critic report
-
+    if on_progress:
+        on_progress(4, "Critic is reviewing the report")
     print("\n"+" ="*50)
     print("step 4 - critic is reviewing the report ")
     print("="*50)
