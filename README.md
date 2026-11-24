@@ -3,456 +3,347 @@
 [![Python Version](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Framework](https://img.shields.io/badge/Framework-LangChain%20%7C%20LangGraph-orange.svg)](https://python.langchain.com/)
 [![User Interface](https://img.shields.io/badge/UI-Streamlit-red.svg)](https://streamlit.io/)
-[![LLM Provider](https://img.shields.io/badge/LLM-Groq%20%7C%20Google%20Gemini-green.svg)](https://groq.com/)
+[![LLM Provider](https://img.shields.io/badge/LLM-Groq%20(OpenAI%20GPT--OSS--20B)-green.svg)](https://groq.com/)
 [![Search Engine](https://img.shields.io/badge/Search-Tavily%20AI-purple.svg)](https://tavily.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An intelligent, modular multi-agent research application designed to automate information discovery, deep-content extraction, document synthesis, and automated peer review. Built with **LangChain**, **Groq / Google Gemini**, **Tavily Search**, **BeautifulSoup4**, and **Streamlit**.
+An intelligent, modular research platform designed to automate web discovery, concurrent source extraction, cited report synthesis, deterministic citation validation, and automated peer review. Built with **LangChain**, **Groq LLM**, **Tavily AI Search**, **BeautifulSoup4**, and **Streamlit**.
 
 ---
 
 ## 📑 Table of Contents
 
-- [1. Project Overview](#1-project-overview)
-- [2. Problem Statement](#2-problem-statement)
-- [3. Key Features](#3-key-features)
-- [4. Multi-Agent Architecture](#4-multi-agent-architecture)
-- [5. Research Workflow](#5-research-workflow)
-- [6. Technology Stack](#6-technology-stack)
-- [7. Project Folder Structure](#7-project-folder-structure)
-- [8. Installation and Setup](#8-installation-and-setup)
-- [9. Environment Variables Configuration](#9-environment-variables-configuration)
-- [10. How to Run the Application](#10-how-to-run-the-application)
-- [11. How the Multi-Agent Pipeline Works](#11-how-the-multi-agent-pipeline-works)
+- [1. Quick Demo](#1-quick-demo)
+- [2. Project Overview](#2-project-overview)
+- [3. Problem Statement](#3-problem-statement)
+- [4. Key Features](#4-key-features)
+- [5. System Architecture](#5-system-architecture)
+- [6. Research Workflow](#6-research-workflow)
+- [7. Technology Stack](#7-technology-stack)
+- [8. Project Folder Structure](#8-project-folder-structure)
+- [9. Installation and Setup](#9-installation-and-setup)
+- [10. Environment Variables Configuration](#10-environment-variables-configuration)
+- [11. How to Run the Application](#11-how-to-run-the-application)
 - [12. Screenshots & Interface](#12-screenshots--interface)
-- [13. Example Research Topics](#13-example-research-topics)
-- [14. Current Limitations](#14-current-limitations)
-- [15. Future Improvements & Roadmap](#15-future-improvements--roadmap)
-- [16. Contributing](#16-contributing)
-- [17. License](#17-license)
+- [13. Evaluation Harness](#13-evaluation-harness)
+- [14. Example Research Topics](#14-example-research-topics)
+- [15. Current Limitations](#15-current-limitations)
+- [16. Future Improvements & Roadmap](#16-future-improvements--roadmap)
+- [17. Contributing](#17-contributing)
+- [18. License](#18-license)
 
 ---
 
-## 1. Project Overview
+## 1. Quick Demo
 
-**MultiAgentSystem** is an end-to-end autonomous research application that bridges the gap between shallow search engine results and manual research synthesis. Given any user-defined topic, the system delegates responsibilities across a team of specialized AI agents:
+Launch the entire demo with a single command on Windows:
 
-1. **Search Agent:** Queries the web for high-relevance sources and gathers initial summaries via the Tavily AI Search API.
-2. **Reader Agent:** Analyzes candidate URLs from the search results, selects the most relevant source, and scrapes its complete textual contents using BeautifulSoup.
-3. **Writer Agent:** Aggregates search snippets and deep scraped content to synthesize a structured, publication-ready research report.
-4. **Critic Agent:** Conducts a strict review of the generated report, scoring it out of 10 and offering structured critique on strengths and improvement areas.
+```powershell
+.\run_demo.ps1
+```
 
-The application provides an interactive, dark-themed **Streamlit** dashboard as well as a standalone command-line interface.
+This automated launcher executes:
+1. Virtual environment activation (`.venv`).
+2. Comprehensive preflight diagnostics (`preflight.py` verifying `.env` keys, Tavily DNS resolution, and Groq API connectivity).
+3. Streamlit application launch (`streamlit run app.py`).
 
----
-
-## 2. Problem Statement
-
-Conducting thorough online research is traditionally a time-consuming, repetitive process:
-- Users must manually craft queries, sift through search result pages, open multiple articles, and filter out advertisements, navigation bars, and irrelevant content.
-- Standard large language models (LLMs) used in isolation suffer from static knowledge cutoffs and lack real-time web retrieval.
-- Monolithic single-prompt AI systems often produce superficial summaries without verifying whether deep webpage content aligns with the topic.
-
-**MultiAgentSystem** addresses these challenges by dividing the cognitive workload into distinct, specialized agents. Separating information retrieval, deep-page reading, report synthesis, and critical review ensures modularity, traceability, and structured output.
+> [!TIP]
+> **Offline Demo Mode:** If internet access is unavailable or API quotas are exhausted during a presentation, open the **Saved Demo Runs** dropdown in the Streamlit sidebar and click **Load Saved Run** to replay complete pre-generated research reports with zero network calls.
 
 ---
 
-## 3. Key Features
+## 2. Project Overview
 
-- **Automated Web Search:** Queries Tavily's search engine to fetch up to 5 verified web sources with titles, links, and content snippets.
-- **Targeted Web Scraping:** Uses BeautifulSoup to strip HTML boilerplate (scripts, styles, navbars, footers) and extract clean, readable text from target articles.
-- **Structured Report Generation:** Enforces an academic report format consisting of:
-  - Introduction
-  - Key Findings (minimum 3 well-explained points)
-  - Conclusion
-  - Sources (compiled list of referenced URLs)
-- **Automated Quality Review:** Employs an LLM-based Critic chain that rates the report on a 10-point rubric with actionable feedback and a final verdict.
-- **Dual Execution Interfaces:**
-  - **Streamlit Web UI:** Dark-themed dashboard with live execution spinners, stage status badges, multi-tab result views, and Markdown report export.
-  - **CLI Pipeline:** Standalone Python script executable from any terminal.
-- **Multi-Model Support:** Built on LangChain's unified `init_chat_model` interface, preconfigured for **Groq** (`openai/gpt-oss-20b`) with ready integration for **Google Gemini** (`gemini-3.8-flash`).
+**MultiAgentSystem** automates the end-to-end technical research pipeline, bridging the gap between raw search results and synthesized, cited academic documents:
+
+1. **Search Discovery:** Queries the Tavily Search API directly to retrieve up to 5 structured sources with title, URL, and contextual snippet.
+2. **Parallel Source Extraction:** Scrapes all candidate pages concurrently using `ThreadPoolExecutor` and BeautifulSoup, combining search snippets with sanitized body text.
+3. **Cited Report Writer:** Formulates a structured report enforcing strict inline numeric citations (`[1]`, `[2]`).
+4. **Deterministic Citation Engine:** Validates citations in code, strips hallucinated reference numbers, and programmatically builds the official Sources list.
+5. **Peer Review & Critic:** Evaluates the report for factual grounding, structure, and readability, returning a score out of 10 and qualitative critique.
 
 ---
 
-## 4. Multi-Agent Architecture
+## 3. Problem Statement
 
-The system decouples agent responsibilities into ReAct tool-calling agents and LangChain Expression Language (LCEL) chains.
+Manual research and single-prompt LLM generation face severe operational constraints:
+- **Hallucination & Outdated Data:** Standard LLMs suffer from knowledge cutoff limits and fabricate facts when ungrounded.
+- **Superficial Retrieval:** Generic search tools dump unstructured HTML or unvetted snippets that overflow token context windows.
+- **Unreliable Citations:** Generative models frequently hallucinate non-existent URLs or misattribute claims to incorrect sources.
+- **Presentation Failure Risk:** Live demonstrations frequently fail due to API rate limits, captive portal Wi-Fi restrictions, or dropped connections.
+
+**MultiAgentSystem** resolves these issues through multi-step functional decomposition, concurrent data extraction, programmatic citation verification, and offline demo caching.
+
+---
+
+## 4. Key Features
+
+- **Structured Search Integration:** Retrieves up to 5 verified sources with persistent numeric IDs (`[1]`, `[2]`).
+- **Concurrent Web Scraping:** High-throughput `ThreadPoolExecutor` scraping with automated fallback to search snippets when pages are paywalled or block automated traffic.
+- **Per-Sentence Citation Enforcement:** Prompt constraints require every factual assertion to cite its numbered source.
+- **Deterministic Citation Finalizer:** Python regex engine verifies every `[n]` citation against valid source IDs and appends a verified markdown Sources section.
+- **Offline Demo Replay:** Automatic JSON caching of successful runs to `demo_cache/` enabling instant offline presentation.
+- **Live Progress Tracking:** Dynamic `st.status` widget updating step-by-step progress and total elapsed execution time.
+- **Preflight Diagnostics:** Pre-demo testing script validating environment variables, Tavily DNS routing, and Groq LLM availability.
+
+---
+
+## 5. System Architecture
 
 ```mermaid
 flowchart TD
     classDef ui fill:#1E293B,stroke:#38BDF8,stroke-width:2px,color:#F8FAFC;
-    classDef agent fill:#0F172A,stroke:#818CF8,stroke-width:2px,color:#F8FAFC;
+    classDef proc fill:#0F172A,stroke:#818CF8,stroke-width:2px,color:#F8FAFC;
     classDef tool fill:#14532D,stroke:#4ADE80,stroke-width:2px,color:#F8FAFC;
-    classDef chain fill:#4C1D95,stroke:#C084FC,stroke-width:2px,color:#F8FAFC;
-    classDef state fill:#3B0764,stroke:#F472B6,stroke-width:2px,color:#F8FAFC;
+    classDef lcel fill:#4C1D95,stroke:#C084FC,stroke-width:2px,color:#F8FAFC;
+    classDef code fill:#3B0764,stroke:#F472B6,stroke-width:2px,color:#F8FAFC;
 
-    User([User]) -->|"Enters Research Topic"| UI["Streamlit UI (app.py)"]
-    UI -->|"Calls run_research_pipeline(topic)"| Pipeline["Research Pipeline Orchestrator (pipeline.py)"]
-    
-    subgraph Step1 ["Step 1: Search Phase"]
-        Pipeline -->|"Invoke"| SearchAgent["Search Agent (agents.py)"]
-        SearchAgent <-->|"Calls get_web_content tool"| TavilyAPI["Tavily Search API (tools.py)"]
-        SearchAgent -->|"Store search_results"| State1[("State: search_results")]
+    User([User]) -->|"Inputs Topic or Selects Saved Run"| UI["Streamlit UI (app.py)"]
+    UI -->|"run_research_pipeline(topic, on_progress)"| Pipeline["Pipeline Coordinator (pipeline.py)"]
+
+    subgraph Step1 ["Step 1: Web Search"]
+        Pipeline -->|"search_sources()"| TavilyTool["Tavily Search API (tools.py)"]
+        TavilyTool -->|"Structured sources [1..5]"| S1[("sources: id, title, url, snippet")]
     end
 
-    subgraph Step2 ["Step 2: Deep Extraction Phase"]
-        State1 -->|"Search results snippet [:800]"| ReaderAgent["Reader Agent (agents.py)"]
-        ReaderAgent <-->|"Calls scrape_url tool"| BS4Scraper["BeautifulSoup Scraper (tools.py)"]
-        ReaderAgent -->|"Store scraped_content"| State2[("State: scraped_content")]
+    subgraph Step2 ["Step 2: Parallel Extraction"]
+        S1 -->|"scrape_many(sources)"| ScraperPool["ThreadPoolExecutor + BeautifulSoup (tools.py)"]
+        ScraperPool -->|"Combined snippet + page text"| S2[("sources with extracted content")]
     end
 
-    subgraph Step3 ["Step 3: Synthesis Phase"]
-        State1 & State2 -->|"Combined research context"| WriterChain["Writer Chain (LCEL) (agents.py)"]
-        WriterChain -->|"Store report"| State3[("State: report")]
+    subgraph Step3 ["Step 3: Synthesis & Citation Normalization"]
+        S2 -->|"build_context(sources)"| Writer["Writer LCEL Chain (agents.py)"]
+        Writer -->|"Raw draft"| RetryCheck{"Length >= 150 words?"}
+        RetryCheck -->|No: Retry up to 3x| Writer
+        RetryCheck -->|Yes| Normalizer["normalize_citations() [1,2] -> [1][2]"]
+        Normalizer -->|"Normalized draft"| CitValidator["finalize_citations() (code validation)"]
+        CitValidator -->|"Drop hallucinated [n] & generate ## Sources"| ValidatedReport[("Validated Final Report")]
     end
 
-    subgraph Step4 ["Step 4: Quality Review Phase"]
-        State3 -->|"Draft report"| CriticChain["Critic Chain (LCEL) (agents.py)"]
-        CriticChain -->|"Store feedback"| State4[("State: feedback")]
+    subgraph Step4 ["Step 4: Quality Review"]
+        ValidatedReport -->|"critic_chain.invoke()"| Critic["Critic LCEL Chain (agents.py)"]
+        Critic -->|"Structured rubric feedback"| Feedback[("Review: Score, Strengths, Areas")]
     end
 
-    State4 -->|"Return complete state dict"| UI
-    UI -->|"Tab 1"| OutSearch["🔎 Search Results View"]
-    UI -->|"Tab 2"| OutScraped["📖 Scraped Content View"]
-    UI -->|"Tab 3"| OutReport["📝 Final Report + Download .md"]
-    UI -->|"Tab 4"| OutCritic["🧐 Critic Feedback View"]
+    Feedback & ValidatedReport -->|"Return state dict"| Pipeline
+    Pipeline -->|"Auto-save payload"| Cache["demo_cache/<slug>.json"]
+    Pipeline -->|"Display results"| UI
 ```
 
 ### Component Breakdown
 
-| Component | Type | Responsibility | Underlying Tools / Models |
+| Component | Architecture Type | Implementation Responsibility | Source File |
 | :--- | :--- | :--- | :--- |
-| **Search Agent** | LangChain Agent (`create_agent`) | Queries the web for recent, high-credibility information on the target topic. | `get_web_content` (TavilyClient API) |
-| **Reader Agent** | LangChain Agent (`create_agent`) | Evaluates search URLs, picks the single most relevant page, and scrapes deep content. | `scrape_url` (Requests + BeautifulSoup4) |
-| **Writer Agent** | LCEL Chain (`writer_prompt \| llm`) | Synthesizes search snippets and deep scraped body text into a formatted research report. | LLM (Groq / Gemini) + `StrOutputParser` |
-| **Critic Agent** | LCEL Chain (`critic_prompt \| llm`) | Reviews the report for clarity, factual depth, and structure; assigns a score and verdict. | LLM (Groq / Gemini) + `StrOutputParser` |
-| **Orchestrator** | Procedural State Pipeline | Manages execution sequence and passes data between agents in a shared dictionary. | Python `run_research_pipeline()` |
-| **Web Interface** | Streamlit UI | Provides input controls, real-time spinner, multi-tab displays, and markdown file download. | Streamlit |
+| **Search Engine** | Direct API Retrieval | Queries Tavily API; assigns stable numeric IDs 1 to 5. | [tools.py](file:///c:/Users/HP/Desktop/MultiAgentSystem/tools.py) |
+| **Parallel Scraper** | Concurrent ThreadPool | Concurrently requests pages; strips scripts/styles; caps text at 2,000 characters. | [tools.py](file:///c:/Users/HP/Desktop/MultiAgentSystem/tools.py) |
+| **Writer Engine** | LCEL Chain + Retry Guard | Synthesizes findings with mandatory inline citations; retries up to 3 times if short. | [agents.py](file:///c:/Users/HP/Desktop/MultiAgentSystem/agents.py), [pipeline.py](file:///c:/Users/HP/Desktop/MultiAgentSystem/pipeline.py) |
+| **Citation Finalizer** | Deterministic Code | Drops hallucinated citation IDs; generates exact `## Sources` markdown hyperlinks. | [pipeline.py](file:///c:/Users/HP/Desktop/MultiAgentSystem/pipeline.py) |
+| **Critic Reviewer** | LCEL Chain | Audits report grounding and structure; outputs a 10-point score and actionable feedback. | [agents.py](file:///c:/Users/HP/Desktop/MultiAgentSystem/agents.py) |
+| **Demo Cache Utility** | Serialization Engine | Generates slugs; auto-saves runs as JSON; loads saved runs for offline replay. | [demo_cache_utils.py](file:///c:/Users/HP/Desktop/MultiAgentSystem/demo_cache_utils.py) |
+| **Web Dashboard** | Streamlit UI | Provides live execution progress, offline cache loading, and tabbed inspection. | [app.py](file:///c:/Users/HP/Desktop/MultiAgentSystem/app.py) |
 
 ---
 
-## 5. Research Workflow
+## 6. Research Workflow
 
-The pipeline executes sequentially in four synchronized stages:
-
-1. **Query Submission:** The user inputs a research topic via the Streamlit interface (e.g., *"What are the major reasons behind the downfall of gold and silver prices in India?"*).
-2. **Search Retrieval (Step 1):** The Search Agent calls `get_web_content(query)` via the Tavily API, retrieving up to 5 structured results (Title, URL link, 300-character snippet).
-3. **Deep Reading & Scraping (Step 2):** The Reader Agent inspects the top search results, identifies the single most relevant URL, and triggers `scrape_url(url)`. The tool downloads the HTML, eliminates boilerplate tags, and strips up to 3,000 characters of clean text.
-4. **Report Drafting (Step 3):** The Writer Agent receives both the broad search snippets and the scraped body text. It generates a comprehensive report following the mandatory 4-part structure (Introduction, Key Findings, Conclusion, Sources).
-5. **Peer Review & Feedback (Step 4):** The Critic Agent reads the completed report and generates a review containing a score out of 10, listed strengths, areas to improve, and a final one-line verdict.
-6. **Result Presentation:** Streamlit populates 4 interactive tabs, displays stage completion checkmarks, and enables direct `.md` report download.
+1. **Initialization:** The user submits a research topic or chooses an offline demo run from the sidebar.
+2. **Step 1 - Search Retrieval:** `search_sources()` requests top 5 search hits from Tavily, creating structured dictionaries with numeric IDs.
+3. **Step 2 - Concurrent Scraping:** `scrape_many()` uses 5 worker threads to scrape full HTML, removes boilerplate elements (`script`, `style`, `nav`, `footer`, `header`, `aside`), and extracts up to 2,000 characters combined with Tavily's snippet.
+4. **Step 3 - Report Synthesis:** `write_report()` invokes `writer_chain` with numbered sources context. A verification loop checks that the draft contains $\ge 150$ words.
+5. **Citation Normalization & Finalization:** Comma-separated citations (e.g. `[1, 2]`) are converted to `[1][2]`. Non-existent source numbers are deleted, and valid sources are compiled into `## Sources`.
+6. **Step 4 - Critic Audit:** `critic_chain` evaluates the report and returns scores, strengths, weaknesses, and a concluding verdict.
+7. **Cache & Render:** The completed run is auto-saved to `demo_cache/` and displayed across 4 interactive tabs.
 
 ---
 
-## 6. Technology Stack
+## 7. Technology Stack
 
-| Category | Technology | Purpose |
+| Library / Tool | Pinned Version | Role |
 | :--- | :--- | :--- |
-| **Programming Language** | Python 3.10+ | Core runtime environment |
-| **Agent Orchestration** | LangChain & LangGraph | Agent creation (`create_agent`) and LCEL prompt pipelines |
-| **LLM Inference** | Groq (`openai/gpt-oss-20b`) / Google Gemini | High-speed LLM reasoning and structured generation |
-| **Search Engine** | Tavily Search API (`tavily-python`) | AI-optimized web search for agent workflows |
-| **Web Scraping** | BeautifulSoup4 & Requests | HTML parsing, DOM sanitization, and text extraction |
-| **User Interface** | Streamlit | Reactive dark-themed dashboard and markdown exporter |
-| **Environment Config** | Python-Dotenv | Secure local loading of API keys |
-| **Console Formatting** | Rich | Formatted terminal output during execution |
+| **Python** | 3.10+ | Execution runtime |
+| **LangChain** | 1.5.2 | Agent primitives and LCEL prompt-to-model chains |
+| **LangGraph** | 1.2.24 | Agent workflow graph foundation |
+| **Groq / langchain-groq** | 1.7.0 / 1.2.1 | Fast LLM inference (`openai/gpt-oss-20b`) |
+| **Tavily Python** | 0.8.5 | High-accuracy web search API |
+| **BeautifulSoup4** | 4.15.0 | HTML parsing and text extraction |
+| **Requests** | 2.34.2 | HTTP client for webpage scraping |
+| **Streamlit** | 1.67.0 | Dark-mode interactive web dashboard |
+| **Python-Dotenv** | 1.2.4 | Environment variable loader |
+| **Rich** | 15.0.0 | Structured terminal logging |
 
 ---
 
-## 7. Project Folder Structure
+## 8. Project Folder Structure
 
 ```plaintext
 MultiAgentSystem/
 │
-├── .env                  # Environment variables file (API keys - DO NOT COMMIT)
-├── .env.example          # Sample environment variables template
+├── .env                  # API keys (TAVILY_API_KEY, GROQ_API_KEY - DO NOT COMMIT)
+├── .env.example          # Environment variable template
+├── .gitignore            # Git exclusion rules (secrets, venv, caches)
 │
-├── agents.py             # Agent definitions (Search, Reader) and LCEL chains (Writer, Critic)
-├── tools.py              # Custom LangChain tools (Tavily search & BeautifulSoup scraper)
-├── pipeline.py           # Sequential pipeline coordinator managing agent execution & state
-├── app.py                # Streamlit web application with custom CSS and tabbed results UI
+├── app.py                # Streamlit web UI with live progress & offline replay
+├── pipeline.py           # Pipeline orchestrator with progress callback & retry guards
+├── agents.py             # LLM setup, writer chain, and critic chain
+├── tools.py              # Tavily search & concurrent BeautifulSoup scraper
+├── demo_cache_utils.py   # Shared JSON serialization & loading utilities
 │
-├── requirement.txt       # Project dependencies manifest
-├── test.py               # Standalone test script to verify Gemini LLM connectivity
-└── README.md             # Project documentation and setup guide
+├── preflight.py          # Pre-demo diagnostic script (keys, DNS, LLM probe, cache)
+├── make_demo_cache.py    # Batch script to pre-generate offline demo runs
+├── test.py               # Quick Groq model connectivity test
+├── run_demo.ps1          # One-click Windows PowerShell demo launcher
+├── evaluate.py           # Empirical evaluation harness with --quick mode
+│
+├── requirements.txt      # Pinned dependency manifest
+├── DEMO.md               # Faculty presentation guide, demo script & FAQ
+└── README.md             # Project documentation
 ```
 
 ---
 
-## 8. Installation and Setup
-
-Follow these step-by-step instructions to set up and run the project locally on **Windows (PowerShell)**.
+## 9. Installation and Setup
 
 ### Prerequisites
+- Python 3.10, 3.11, or 3.12 installed on Windows.
+- API keys for **Tavily** ([tavily.com](https://tavily.com)) and **Groq** ([console.groq.com](https://console.groq.com)).
 
-- **Python 3.10, 3.11, or 3.12** installed on your system ([Download Python](https://www.python.org/downloads/)).
-- **Git** installed on your system ([Download Git](https://git-scm.com/)).
-- Active API keys for **Tavily** and **Groq** (or **Google Gemini**).
-
-### Step 1: Clone the Repository
-
-Open Windows PowerShell and clone the project repository:
-
+### Step 1: Clone Repository
 ```powershell
 git clone https://github.com/your-username/MultiAgentSystem.git
 cd MultiAgentSystem
 ```
 
-*(If setting up locally without Git, navigate directly to your project root folder).*
-
-### Step 2: Create a Virtual Environment
-
-Create an isolated Python virtual environment named `.venv`:
-
+### Step 2: Create & Activate Virtual Environment
 ```powershell
 python -m venv .venv
-```
-
-### Step 3: Activate the Virtual Environment
-
-Enable script execution for the current session (if restricted) and activate the environment:
-
-```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\.venv\Scripts\Activate.ps1
 ```
 
-When activated, you will see `(.venv)` at the beginning of your PowerShell prompt.
-
-### Step 4: Install Dependencies
-
-Install the core dependencies listed in `requirement.txt`:
-
+### Step 3: Install Dependencies
 ```powershell
-pip install -r requirement.txt
+pip install -r requirements.txt
 ```
-
-> [!IMPORTANT]
-> **Additional Dependencies Notice:**
-> The `app.py` user interface and active `agents.py` model configuration require `streamlit` and `langchain-groq`. If they are not yet in your environment, install them using:
-> ```powershell
-> pip install streamlit langchain-groq groq
-> ```
 
 ---
 
-## 9. Environment Variables Configuration
+## 10. Environment Variables Configuration
 
-The application requires API keys to interact with the search engine and LLM providers.
-
-### 1. Create a `.env` File
-
-In the root directory of the project, create a file named `.env`:
-
-```powershell
-New-Item -Path .env -ItemType File
-```
-
-### 2. Configure Your API Keys
-
-Open the `.env` file in your preferred text editor (e.g., VS Code or Notepad) and add your keys:
+Create a `.env` file in the project root:
 
 ```ini
 # ==========================================
-# Search Engine API Key (Required)
+# MultiAgentSystem API Keys
 # ==========================================
-# Obtain from: https://app.tavily.com/
 TAVILY_API_KEY=tvly-your-actual-tavily-api-key-here
-
-# ==========================================
-# Primary LLM Provider: Groq (Required for default setup)
-# ==========================================
-# Obtain from: https://console.groq.com/keys
 GROQ_API_KEY=gsk_your-actual-groq-api-key-here
-
-# ==========================================
-# Alternative LLM Provider: Google Gemini (Optional)
-# ==========================================
-# Obtain from: https://aistudio.google.com/app/apikey
-GOOGLE_API_KEY=AIzaSy-your-actual-google-gemini-key-here
 ```
-
-> [!WARNING]
-> **Security Best Practice:** Never commit your `.env` file or hardcode API keys into source files. Ensure `.env` is listed in your `.gitignore` file.
 
 ---
 
-## 10. How to Run the Application
+## 11. How to Run the Application
 
-### Option A: Launch the Streamlit Web Application (Recommended)
+### Option A: One-Click Demo Launcher (Recommended)
+```powershell
+.\run_demo.ps1
+```
 
-To start the interactive web interface:
-
+### Option B: Manual Streamlit Launch
 ```powershell
 streamlit run app.py
 ```
 
-Streamlit will start a local web server and automatically open the application in your default browser at:
-```
-http://localhost:8501
-```
-
-### Option B: Run via the Command Line (CLI)
-
-You can also run the research pipeline directly in your terminal:
-
+### Option C: Diagnostic Preflight Verification
 ```powershell
-python pipeline.py
+python preflight.py
 ```
 
-When prompted:
-```plaintext
-Enter a research topic : Impact of Solid-State Batteries on Electric Vehicles
-```
-The terminal will display live stage logs, raw search outputs, scraped page text, the generated report, and the critic review.
-
-### Option C: Verify LLM Connectivity
-
-To verify that your Google Gemini API key and environment are functioning properly:
-
+### Option D: Pre-Generate Demo Cache
 ```powershell
-python test.py
-```
-*Expected output:* `Gemini is working`
-
----
-
-## 11. How the Multi-Agent Pipeline Works
-
-### 1. Search Tool (`tools.py`)
-```python
-@tool
-def get_web_content(query: str) -> str:
-    search_results = tavily.search(query, max_results=5)
-    ...
-```
-- Calls `TavilyClient.search()` with `max_results=5`.
-- Formats the results into clean text blocks with `Title:`, `Link:`, and a `Snippet:` truncated to 300 characters to conserve context tokens.
-
-### 2. Web Scraping Tool (`tools.py`)
-```python
-@tool
-def scrape_url(url: str) -> str:
-    resp = requests.get(url, timeout=8, headers={"User-Agent": "Mozilla/5.0"})
-    soup = BeautifulSoup(resp.text, "html.parser")
-    for tag in soup(["script", "style", "nav", "footer"]):
-        tag.decompose()
-    return soup.get_text(separator=" ", strip=True)[:3000]
-```
-- Performs an HTTP `GET` request with an 8-second timeout and standard desktop User-Agent header.
-- Decomposes non-content tags (`<script>`, `<style>`, `<nav>`, `<footer>`).
-- Extracts whitespace-stripped text truncated to the first 3,000 characters.
-
-### 3. Agent & Chain Configurations (`agents.py`)
-- **Model Initializer:** Configured with `init_chat_model("groq:openai/gpt-oss-20b", temperature=0.3)`.
-- **Search Agent:** Instantiated using `create_agent(model=llm, tools=[get_web_content])`.
-- **Reader Agent:** Instantiated using `create_agent(model=llm, tools=[scrape_url])`.
-- **Writer Chain:** LCEL sequence `writer_prompt | llm | StrOutputParser()` enforcing structured sections.
-- **Critic Chain:** LCEL sequence `critic_prompt | llm | StrOutputParser()` enforcing scoring criteria.
-
-### 4. Data Flow State (`pipeline.py`)
-The pipeline coordinates execution using a shared state dictionary:
-```python
-state = {
-    "search_results": "...",   # Captured from Search Agent's final message
-    "scraped_content": "...",  # Captured from Reader Agent's final message
-    "report": "...",           # Generated by Writer Chain
-    "feedback": "..."          # Generated by Critic Chain
-}
+python make_demo_cache.py
 ```
 
 ---
 
 ## 12. Screenshots & Interface
 
-*Note: Below are placeholders for interface screenshots. Add your captured screenshots to an `assets/` or `images/` directory.*
+> [!NOTE]
+> Store actual captured interface screenshots in an `assets/` directory.
 
-### 1. Main Dashboard & Research Input
-![Main Dashboard Placeholder](https://via.placeholder.com/900x480/151B27/60A5FA?text=Streamlit+Main+Dashboard+-+Research+Topic+Input)
-*The dark-themed landing view with the topic text area, sidebar workflow explanation, and Start Research button.*
+### 1. Main Dashboard & Topic Input
+![Main Dashboard Placeholder](https://via.placeholder.com/900x450/151B27/60A5FA?text=Streamlit+Main+Dashboard+-+Research+Topic+Input)
+*Interactive topic submission with pre-configured example suggestions.*
 
-### 2. Research Execution & Status Badges
-![Pipeline Execution Placeholder](https://via.placeholder.com/900x480/151B27/4ADE80?text=Pipeline+Execution+-+4+Stage+Completion+Checkmarks)
-*Live visual status indicators confirming completion of Search, Scraping, Report Generation, and Critic Review.*
+### 2. Live Step Progress Tracking
+![Live Status Placeholder](https://via.placeholder.com/900x450/151B27/4ADE80?text=Live+Execution+Progress+-+st.status+Widget)
+*Real-time execution updates displaying search, scraping, writing, and review stages.*
 
-### 3. Generated Report & Download
-![Report Output Placeholder](https://via.placeholder.com/900x480/151B27/C084FC?text=Generated+Report+Tab+-+Structured+Markdown+with+Download+Button)
-*Tab 3 displaying the final structured research report with the one-click `Download Research Report` button.*
+### 3. Generated Report with Inline Citations
+![Generated Report Placeholder](https://via.placeholder.com/900x450/151B27/C084FC?text=Generated+Report+Tab+-+Inline+Citations+and+Sources)
+*Structured output displaying Introduction, Key Findings with inline citations, Conclusion, and markdown Sources.*
 
-### 4. Critic Review & Scoring
-![Critic Review Placeholder](https://via.placeholder.com/900x480/151B27/F472B6?text=Critic+Review+Tab+-+Score+Out+of+10+and+Constructive+Feedback)
-*Tab 4 displaying the Critic Agent's score out of 10, identified strengths, areas to improve, and verdict.*
-
----
-
-## 13. Example Research Topics
-
-Here are sample research prompts suited for testing the multi-agent system:
-
-- **Economics & Markets:**
-  > *"What are the major reasons behind the downfall of gold and silver prices in India?"*
-- **Artificial Intelligence:**
-  > *"Analyze the architectural differences and trade-offs between Mixture of Experts (MoE) and dense LLMs."*
-- **Clean Energy:**
-  > *"What are the technical bottlenecks in scaling green hydrogen production for commercial transport?"*
-- **Biotechnology:**
-  > *"Recent clinical trial breakthroughs in mRNA cancer vaccines over the past 12 months."*
+### 4. Critic Review & Offline Replay Sidebar
+![Critic Review Placeholder](https://via.placeholder.com/900x450/151B27/F472B6?text=Critic+Review+Tab+and+Offline+Saved+Runs+Sidebar)
+*Detailed 10-point evaluation and sidebar dropdown for instant offline presentation.*
 
 ---
 
-## 14. Current Limitations
+## 13. Evaluation Harness
 
-To maintain technical accuracy, the following boundaries of the current implementation should be noted:
+The repository includes a dedicated empirical evaluation harness ([evaluate.py](file:///c:/Users/HP/Desktop/MultiAgentSystem/evaluate.py)) designed to benchmark the system against a baseline single-prompt LLM across 18 diverse technical and economic topics.
 
-- **Single-Page Deep Reading:** The Reader Agent selects and scrapes exactly one URL from the initial search results; it does not currently crawl multiple pages simultaneously.
-- **Context Truncation Thresholds:**
-  - Search snippets are capped at 300 characters each.
-  - Reader Agent receives the first 800 characters of search output to select a URL.
-  - Scraped body text is truncated to 3,000 characters to prevent token overflow.
-- **Linear Execution without Feedback Loop:** The pipeline runs in a linear sequence: Search → Read → Write → Critique. The Critic reviews the report, but the system does not automatically cycle back to the Writer for iterative revisions.
-- **Synchronous Scraping:** `scrape_url` runs synchronously with an 8-second timeout. Dynamic JavaScript-rendered websites (e.g., Single Page Apps) are not executed by the plain requests parser.
-- **Dependency List Discrepancy:** The root `requirement.txt` file does not currently include `streamlit` or `langchain-groq`, which must be installed manually.
+### Tracked Metrics
+- **Latency & Word Count:** Baseline vs. pipeline completion speed and output volume.
+- **Scrape Success Rate:** Percentage of candidate URLs successfully scraped vs. snippet fallbacks.
+- **Citation Coverage:** Percentage of factual sentences in Key Findings backed by inline citations.
+- **Hallucinated Citation Rate:** Frequency of raw draft citations referencing non-existent sources.
+- **Faithfulness (LLM-as-a-Judge):** Sentence-level verification using a secondary model (`qwen/qwen3.8-27b`) judging whether source text directly supports the generated claims.
 
----
-
-## 15. Future Improvements & Roadmap
-
-- [ ] **Cyclic LangGraph Architecture:** Refactor the procedural pipeline into a formal LangGraph `StateGraph` with conditional edges enabling automatic report revision if the Critic's score falls below 7/10.
-- [ ] **Multi-Source Parallel Scraping:** Expand the Reader Agent to scrape the top 3–5 candidate URLs concurrently using `asyncio` or `aiohttp`.
-- [ ] **Headless Browser Scraping:** Integrate Playwright or Selenium to extract content from JavaScript-heavy single-page applications.
-- [ ] **Dynamic Citation Footnotes:** Implement automated in-text citation markers `[1]`, `[2]` mapped directly to scraped source URLs.
-- [ ] **Export Formats:** Add one-click export options for **PDF** and **DOCX** in addition to Markdown.
-- [ ] **Human-in-the-Loop Validation:** Allow users to approve or alter the selected URLs before deep scraping begins.
+> [!IMPORTANT]
+> **Evaluation Status:** Full empirical evaluation is currently **in progress**. Run the quick 5-topic evaluation harness manually using:
+> ```powershell
+> python evaluate.py --quick
+> ```
 
 ---
 
-## 16. Contributing
+## 14. Example Research Topics
 
-Contributions are welcome! To contribute to the project:
-
-1. **Fork the Repository** on GitHub.
-2. **Create a Feature Branch:**
-   ```powershell
-   git checkout -b feature/your-feature-name
-   ```
-3. **Commit Your Changes:**
-   ```powershell
-   git commit -m "Add: description of your feature"
-   ```
-4. **Push to the Branch:**
-   ```powershell
-   git push origin feature/your-feature-name
-   ```
-5. **Open a Pull Request** describing your changes and testing results.
+- **Financial Markets:** `Major reasons behind the recent fall in gold and silver prices in India`
+- **AI Architectures:** `Mixture of Experts vs dense LLMs: architecture and trade-offs`
+- **Fintech & Infrastructure:** `Impact of UPI on digital payments in India`
+- **Biomedical Advances:** `Recent clinical trial progress in mRNA cancer vaccines`
 
 ---
 
-## 17. License
+## 15. Current Limitations
+
+1. **LLM Provider Quota:** Reliance on developer-tier Groq API exposes the system to tokens-per-minute (TPM) limits on complex topics.
+2. **Scraped Content Truncation:** Content is capped at 2,000 characters per page plus search snippets to prevent context window saturation.
+3. **Linear Feedback Loop:** The Critic evaluates the draft but does not currently trigger automated iterative rewriting if the score falls below a threshold.
+4. **Synchronous Requests:** Scraping uses a synchronous `requests` pool rather than an asynchronous event loop.
+
+---
+
+## 16. Future Improvements & Roadmap
+
+- [ ] **Cyclic LangGraph Architecture:** Implement an iterative graph with conditional edges routing low-scoring reports back to the Writer with critic feedback.
+- [ ] **Multi-Provider Fallback:** Automatically route queries to Google Gemini or local Ollama instances when Groq rate limits are hit.
+- [ ] **Document Export:** Add one-click export to PDF and DOCX formats.
+- [ ] **Interactive Citation Footnotes:** Hoverable citations displaying source excerpts directly in the UI.
+
+---
+
+## 17. Contributing
+
+1. Fork the project on GitHub.
+2. Create your feature branch (`git checkout -b feature/improvement`).
+3. Commit your changes (`git commit -m 'feat: add feature'`).
+4. Push to the branch (`git push origin feature/improvement`).
+5. Open a Pull Request.
+
+---
+
+## 18. License
 
 This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
-
----
-
-<p align="center">
-  <b>MultiAgentSystem</b> • Developed as an AI Engineering & Multi-Agent Systems Portfolio Project
-</p>
